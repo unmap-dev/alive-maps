@@ -1,0 +1,104 @@
+{
+ "culture.arts_centre": [
+  "culture.arts_centre-1.jpg",
+  "culture.arts_centre-2.jpg"
+ ],
+ "culture.gallery": [
+  "culture.gallery-1.jpg",
+  "culture.gallery-2.jpg"
+ ],
+ "culture.library": [
+  "culture.library-1.jpg",
+  "culture.library-2.jpg"
+ ],
+ "culture.museum": [
+  "culture.museum-1.jpg",
+  "culture.museum-2.jpg"
+ ],
+ "culture.theatre": [
+  "culture.theatre-1.jpg",
+  "culture.theatre-2.jpg"
+ ],
+ "food.bakery": [
+  "food.bakery-1.jpg",
+  "food.bakery-2.jpg"
+ ],
+ "food.bar": [
+  "food.bar-1.jpg",
+  "food.bar-2.jpg"
+ ],
+ "food.cafe": [
+  "food.cafe-1.jpg",
+  "food.cafe-2.jpg",
+  "food.cafe-3.jpg"
+ ],
+ "food.ice_cream": [
+  "food.ice_cream-1.jpg",
+  "food.ice_cream-2.jpg"
+ ],
+ "food.pub": [
+  "food.pub-1.jpg",
+  "food.pub-2.jpg"
+ ],
+ "food.restaurant": [
+  "food.restaurant-1.jpg",
+  "food.restaurant-2.jpg",
+  "food.restaurant-3.jpg"
+ ],
+ "shop.books": [
+  "shop.books-1.jpg",
+  "shop.books-2.jpg"
+ ],
+ "shop.clothes": [
+  "shop.clothes-1.jpg",
+  "shop.clothes-2.jpg"
+ ],
+ "tourism.artwork": [
+  "tourism.artwork-1.jpg",
+  "tourism.artwork-2.jpg",
+  "tourism.artwork-3.jpg"
+ ],
+ "tourism.attraction": [
+  "tourism.attraction-1.jpg",
+  "tourism.attraction-2.jpg"
+ ],
+ "tourism.viewpoint": [
+  "tourism.viewpoint-1.jpg",
+  "tourism.viewpoint-2.jpg"
+ ],
+ "park": [
+  "park-1.jpg",
+  "park-2.jpg",
+  "park-3.jpg",
+  "park.garden-1.jpg",
+  "park.garden-2.jpg"
+ ],
+ "water": [
+  "water-1.jpg",
+  "water-2.jpg",
+  "water-3.jpg",
+  "water.pond-1.jpg",
+  "water.pond-2.jpg",
+  "quiet.bridge-1.jpg",
+  "quiet.bridge-2.jpg"
+ ],
+ "quiet": [
+  "quiet-1.jpg",
+  "quiet-2.jpg"
+ ],
+ "life": [
+  "food.cafe-1.jpg",
+  "food.cafe-2.jpg",
+  "food.cafe-3.jpg",
+  "food.restaurant-1.jpg",
+  "food.restaurant-2.jpg",
+  "food.restaurant-3.jpg"
+ ],
+ "landmark": [
+  "tourism.artwork-1.jpg",
+  "tourism.artwork-2.jpg",
+  "tourism.artwork-3.jpg",
+  "culture.museum-1.jpg",
+  "culture.museum-2.jpg"
+ ]
+}

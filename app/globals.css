@@ -1,0 +1,110 @@
+/* A stock `shadcn init` (base-nova) stylesheet with Alive Maps' own token values: a warm paper
+   ground, a teal primary and a 1rem radius. No unmap brand: the block follows these tokens as it
+   would a customer's. Values are the hex design tokens converted to OKLCH; the chart colours and
+   the light destructive, which the design does not set, are derived to match. */
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "./unmap-registry.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: var(--font-figtree);
+  --font-heading: var(--font-figtree);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  --radius: 1rem;
+  --background: oklch(0.98 0.009 84.572); /* #FBF8F2 */
+  --foreground: oklch(0.275 0.019 218.723); /* #1D2A2E */
+  --card: oklch(1 0 0); /* #FFFFFF */
+  --card-foreground: oklch(0.275 0.019 218.723);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.275 0.019 218.723);
+  --primary: oklch(0.511 0.086 186.391); /* #0F766E */
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.944 0.014 84.584); /* #F1ECE2 */
+  --secondary-foreground: oklch(0.275 0.019 218.723);
+  --muted: oklch(0.944 0.014 84.584); /* #F1ECE2 */
+  --muted-foreground: oklch(0.502 0.014 209.801); /* #5B6668 */
+  --accent: oklch(0.955 0.013 185.092); /* #E7F3F1 */
+  --accent-foreground: oklch(0.439 0.072 185.768); /* #0F5F58 */
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.906 0.019 83.063); /* #E6DFD2 */
+  --input: oklch(0.874 0.022 85.948); /* #DCD5C6 */
+  --ring: oklch(0.511 0.086 186.391);
+  --chart-1: oklch(0.511 0.086 186.391);
+  --chart-2: oklch(0.655 0.104 185.954);
+  --chart-3: oklch(0.72 0.12 75);
+  --chart-4: oklch(0.66 0.14 30);
+  --chart-5: oklch(0.5 0.03 230);
+}
+
+.dark {
+  --background: oklch(0.206 0.012 214.715); /* #11191B */
+  --foreground: oklch(0.938 0.007 174.371); /* #E6ECEA */
+  --card: oklch(0.243 0.015 211.215); /* #182224 */
+  --card-foreground: oklch(0.938 0.007 174.371);
+  --popover: oklch(0.243 0.015 211.215);
+  --popover-foreground: oklch(0.938 0.007 174.371);
+  --primary: oklch(0.655 0.104 185.954); /* #2BA59A */
+  --primary-foreground: oklch(0.179 0.012 205.738); /* #0B1314 */
+  --secondary: oklch(0.276 0.016 209.888); /* #1F2A2C */
+  --secondary-foreground: oklch(0.938 0.007 174.371);
+  --muted: oklch(0.276 0.016 209.888);
+  --muted-foreground: oklch(0.721 0.016 207.085); /* #9AA8AA */
+  --accent: oklch(0.308 0.031 185.65); /* #1D3532 */
+  --accent-foreground: oklch(0.895 0.041 185.104); /* #BFE6E0 */
+  --destructive: oklch(0.689 0.166 20.666); /* #F06A6E */
+  --border: oklch(0.323 0.016 208.772); /* #2A3638 */
+  --input: oklch(0.323 0.016 208.772);
+  --ring: oklch(0.655 0.104 185.954);
+  --chart-1: oklch(0.655 0.104 185.954);
+  --chart-2: oklch(0.78 0.09 185);
+  --chart-3: oklch(0.8 0.12 78);
+  --chart-4: oklch(0.72 0.14 30);
+  --chart-5: oklch(0.7 0.03 230);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
