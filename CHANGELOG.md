@@ -1,5 +1,13 @@
 # @unmap/app-alive-maps
 
+## 0.0.2
+
+### Patch Changes
+
+- @unmap/sdk@0.31.0
+- @unmap/maps@0.31.0
+- @unmap/geocoding@0.31.0
+
 ## 0.0.1
 
 ### Patch Changes

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Figtree } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
+import { COLOR_MODE_KEY } from "@/lib/kit/config";
 import "./globals.css";
 
 const figtree = Figtree({ subsets: ["latin", "latin-ext"], variable: "--font-figtree" });
@@ -21,7 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning className={figtree.variable}>
       <body className="antialiased">
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem storageKey={COLOR_MODE_KEY} disableTransitionOnChange>
           {children}
         </ThemeProvider>
       </body>

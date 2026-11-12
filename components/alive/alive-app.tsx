@@ -11,6 +11,7 @@ import { BuiltWith } from "@/lib/kit/built-with";
 import { API_KEY } from "@/lib/kit/config";
 import { format, LANGS, type Lang } from "@/lib/kit/i18n";
 import { MissingKey } from "@/lib/kit/missing-key";
+import { ModeToggle } from "@/lib/kit/mode-toggle";
 import { ProvenanceBadge } from "@/lib/kit/provenance-badge";
 import { KIT_TEXT } from "@/lib/kit/strings";
 import { useDocumentTitle, useLang } from "@/lib/kit/use-lang";
@@ -59,6 +60,7 @@ function AboutPopover({ lang, onLang }: { lang: Lang; onLang: (lang: Lang) => vo
         </section>
         <Separator />
         <div className="flex flex-wrap items-center gap-2">
+          <ModeToggle lang={lang} />
           <ToggleGroup variant="outline" size="sm" spacing={0} value={[lang]} onValueChange={(v) => v[0] && onLang(v[0] as Lang)} aria-label={kit.language}>
             {LANGS.map((l) => (
               <ToggleGroupItem key={l} value={l} aria-label={l === "en" ? "English" : "Français"}>
