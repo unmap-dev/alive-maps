@@ -1,5 +1,14 @@
 # @unmap/app-alive-maps
 
+## 0.0.5
+
+### Patch Changes
+
+- Updated dependencies [51737c1]
+  - @unmap/sdk@0.32.1
+  - @unmap/maps@0.32.1
+  - @unmap/geocoding@0.32.1
+
 ## 0.0.4
 
 ### Patch Changes
