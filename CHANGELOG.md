@@ -1,5 +1,31 @@
 # @unmap/app-alive-maps
 
+## 0.0.13
+
+### Patch Changes
+
+- @unmap/sdk@0.37.2
+- @unmap/maps@0.37.2
+- @unmap/geocoding@0.37.2
+
+## 0.0.12
+
+### Patch Changes
+
+- Updated dependencies [e09502b]
+  - @unmap/geocoding@0.37.1
+  - @unmap/maps@0.37.1
+  - @unmap/sdk@0.37.1
+
+## 0.0.11
+
+### Patch Changes
+
+- Updated dependencies [31eeefa]
+  - @unmap/sdk@0.37.0
+  - @unmap/maps@0.37.0
+  - @unmap/geocoding@0.37.0
+
 ## 0.0.10
 
 ### Patch Changes

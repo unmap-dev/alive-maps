@@ -98,6 +98,8 @@ export function AliveControls(props: {
   routes: ReactNode;
   /** In the phone sheet, which scrolls as a whole: the button sticks to its bottom instead. */
   inSheet?: boolean;
+  /** The minimum-gain dial, the method filter and the sources note; off for a reader-facing page. */
+  technical?: boolean;
   footer: ReactNode;
 }) {
   const { lang } = props;
@@ -199,49 +201,51 @@ export function AliveControls(props: {
 
             <Dial label={copy.budget} value={props.budget} shown={copy.budgetValue(props.budget)} min={0} max={MAX_BUDGET} step={0.5} onChange={props.onBudget} wide />
 
-            <Collapsible open={more} onOpenChange={setMore} className="flex flex-col gap-3">
-              <CollapsibleTrigger
-                render={
-                  <Button type="button" variant="ghost" size="sm" className="-ml-2 w-fit text-muted-foreground">
-                    <ChevronDown className={["transition-transform motion-reduce:transition-none", more ? "rotate-180" : ""].join(" ")} />
-                    {more ? copy.fewer : copy.more}
-                  </Button>
-                }
-              />
-              <CollapsibleContent className="flex flex-col gap-4">
-                <div className="flex flex-col gap-1">
-                  <Dial label={copy.minGain} value={props.minGain} shown={copy.minGainValue(props.minGain)} min={0} max={20} step={1} onChange={props.onMinGain} wide />
-                  <p className="text-xs text-muted-foreground">{copy.minGainHint}</p>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <span id={`${uid}-method`} className="text-sm font-medium">
-                    {copy.method}
-                  </span>
-                  <ToggleGroup
-                    aria-labelledby={`${uid}-method`}
-                    variant="outline"
-                    size="sm"
-                    value={[props.method]}
-                    onValueChange={(next: unknown[]) => {
-                      const m = next[0];
-                      if (m === "both" || m === "detour" || m === "graph") props.onMethod(m);
-                    }}
-                  >
-                    {(["both", "detour", "graph"] as const).map((m) => (
-                      <ToggleGroupItem key={m} value={m}>
-                        {copy.methodFilter[m]}
-                      </ToggleGroupItem>
-                    ))}
-                  </ToggleGroup>
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
+            {props.technical === false ? null : (
+              <Collapsible open={more} onOpenChange={setMore} className="flex flex-col gap-3">
+                <CollapsibleTrigger
+                  render={
+                    <Button type="button" variant="ghost" size="sm" className="-ml-2 w-fit text-muted-foreground">
+                      <ChevronDown className={["transition-transform motion-reduce:transition-none", more ? "rotate-180" : ""].join(" ")} />
+                      {more ? copy.fewer : copy.more}
+                    </Button>
+                  }
+                />
+                <CollapsibleContent className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-1">
+                    <Dial label={copy.minGain} value={props.minGain} shown={copy.minGainValue(props.minGain)} min={0} max={20} step={1} onChange={props.onMinGain} wide />
+                    <p className="text-xs text-muted-foreground">{copy.minGainHint}</p>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <span id={`${uid}-method`} className="text-sm font-medium">
+                      {copy.method}
+                    </span>
+                    <ToggleGroup
+                      aria-labelledby={`${uid}-method`}
+                      variant="outline"
+                      size="sm"
+                      value={[props.method]}
+                      onValueChange={(next: unknown[]) => {
+                        const m = next[0];
+                        if (m === "both" || m === "detour" || m === "graph") props.onMethod(m);
+                      }}
+                    >
+                      {(["both", "detour", "graph"] as const).map((m) => (
+                        <ToggleGroupItem key={m} value={m}>
+                          {copy.methodFilter[m]}
+                        </ToggleGroupItem>
+                      ))}
+                    </ToggleGroup>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
           </CollapsibleContent>
         </Collapsible>
       </div>
       <div className={["flex flex-col gap-2 bg-card px-7 pt-4 pb-6", props.inSheet ? "sticky bottom-0 z-10 border-t" : ""].join(" ")}>
         {props.footer}
-        <p className="text-center text-xs text-muted-foreground">{copy.sources}</p>
+        {props.technical === false ? null : <p className="text-center text-xs text-muted-foreground">{copy.sources}</p>}
       </div>
     </>
   );
@@ -301,8 +305,11 @@ export function AliveRoutesList(props: {
   /** A row under the pointer or focus, to draw that walk on the map; null when it leaves. */
   onHover: (id: string | null) => void;
   onRetry: () => void;
+  /** How each walk was found ("API detour", "Walking graph"); off for a reader-facing page. */
+  technical?: boolean;
 }) {
   const { lang, search } = props;
+  const method = (row: RankedWalk) => (props.technical !== false && (row.method === "detour" || row.method === "graph") ? copy.methods[row.method] : null);
   const copy = ALIVE_COPY[lang];
   const id = useId();
   const [all, setAll] = useState(false);
@@ -376,7 +383,7 @@ export function AliveRoutesList(props: {
             return (
               <label
                 key={row.id}
-                title={[row.method === "detour" || row.method === "graph" ? copy.methods[row.method] : null, reason ?? describe(row.scores, lang, known)].filter(Boolean).join(". ")}
+                title={[method(row), reason ?? describe(row.scores, lang, known)].filter(Boolean).join(". ")}
                 onMouseEnter={() => props.onHover(row.id)}
                 onFocus={() => props.onHover(row.id)}
                 onBlur={() => props.onHover(null)}
@@ -388,10 +395,10 @@ export function AliveRoutesList(props: {
               >
                 <RadioGroupItem value={row.id} data-route-id={row.id} />
                 <span className="min-w-0 truncate font-semibold">{title}</span>
-                {row.method === "detour" || row.method === "graph" ? (
+                {method(row) ? (
                   // Below 400 px the row keeps the name and the time; the method moves to the row's title.
                   <Badge variant="outline" className="h-5 shrink-0 px-1.5 text-[11px] max-[399px]:hidden">
-                    {copy.methods[row.method]}
+                    {method(row)}
                   </Badge>
                 ) : null}
                 {reason ? <span className="sr-only">{reason}</span> : null}
@@ -413,7 +420,20 @@ export function AliveRoutesList(props: {
   );
 }
 
-export function AliveGoButton({ lang, busy, calls, onGo }: { lang: AliveLang; busy: boolean; calls: number | null; onGo: () => void }) {
+export function AliveGoButton({
+  lang,
+  busy,
+  calls,
+  onGo,
+  technical = true,
+}: {
+  lang: AliveLang;
+  busy: boolean;
+  calls: number | null;
+  onGo: () => void;
+  /** The API calls line under the button; off for a reader-facing page. */
+  technical?: boolean;
+}) {
   const copy = ALIVE_COPY[lang];
   return (
     <>
@@ -421,7 +441,7 @@ export function AliveGoButton({ lang, busy, calls, onGo }: { lang: AliveLang; bu
         {busy ? <Spinner aria-hidden="true" /> : null}
         {copy.go}
       </Button>
-      <p className="text-center text-sm text-muted-foreground tabular-nums">{calls === null ? copy.callsBefore : copy.calls(calls)}</p>
+      {technical ? <p className="text-center text-sm text-muted-foreground tabular-nums">{calls === null ? copy.callsBefore : copy.calls(calls)}</p> : null}
     </>
   );
 }
@@ -437,8 +457,11 @@ export function AliveWhyCard(props: {
   /** The basemap tiles were not read: parks, water and traffic say so rather than draw a guess. */
   basemapUnavailable: boolean;
   defaultOpen: boolean;
+  /** The aliveness scores and how the walk was found; off for a reader-facing page. */
+  technical?: boolean;
 }) {
   const { lang, shown, fastest } = props;
+  const technical = props.technical !== false;
   const copy = ALIVE_COPY[lang];
   const [open, setOpen] = useState(props.defaultOpen);
   return (
@@ -449,9 +472,11 @@ export function AliveWhyCard(props: {
             <Button type="button" variant="ghost" className="h-auto w-full justify-between gap-3 px-4 py-3 text-left whitespace-normal">
               <span className="flex min-w-0 flex-col">
                 <span className="text-base font-bold">{copy.why}</span>
-                <span className="text-xs font-normal text-muted-foreground tabular-nums">
-                  {copy.aliveness(Math.round(props.shownScore * 100), Math.round(props.fastestScore * 100))}
-                </span>
+                {technical ? (
+                  <span className="text-xs font-normal text-muted-foreground tabular-nums">
+                    {copy.aliveness(Math.round(props.shownScore * 100), Math.round(props.fastestScore * 100))}
+                  </span>
+                ) : null}
               </span>
               <ChevronDown aria-hidden="true" className={["transition-transform motion-reduce:transition-none", open ? "rotate-180" : ""].join(" ")} />
             </Button>
@@ -483,7 +508,7 @@ export function AliveWhyCard(props: {
             })}
           </dl>
           <p className="text-xs text-muted-foreground">{copy.barsKey}</p>
-          {shown.method === "graph" ? <p className="text-xs text-muted-foreground">{copy.graphNote}</p> : null}
+          {technical && shown.method === "graph" ? <p className="text-xs text-muted-foreground">{copy.graphNote}</p> : null}
         </CollapsibleContent>
       </Collapsible>
     </Card>

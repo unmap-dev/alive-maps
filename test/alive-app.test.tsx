@@ -8,6 +8,8 @@ type Props = Record<string, unknown>;
 const mocks = vi.hoisted(() => ({
   key: "um_test_alive",
   sdkOptions: [] as unknown[],
+  /** How many times the block asked for the fastest walk: a search has started. */
+  routed: 0,
   props: {} as Record<string, Props | undefined>,
 }));
 
@@ -20,7 +22,13 @@ vi.mock("@/lib/kit/config", async (orig) => ({
 // The SDK: the block's one client. Nothing reaches the network.
 vi.mock("@unmap/sdk", () => ({
   Unmap: class {
-    router = { route: vi.fn(), match: vi.fn() };
+    router = {
+      route: vi.fn(() => {
+        mocks.routed += 1;
+        return Promise.reject(new Error("no network in tests"));
+      }),
+      match: vi.fn(),
+    };
     places = { along: vi.fn() };
     constructor(options: unknown) {
       mocks.sdkOptions.push(options);
@@ -63,6 +71,7 @@ async function open(search = "") {
 beforeEach(() => {
   mocks.key = "um_test_alive";
   mocks.sdkOptions.length = 0;
+  mocks.routed = 0;
   mocks.props = {};
   fetchSpy.mockClear();
   vi.stubGlobal("fetch", fetchSpy);
@@ -88,7 +97,9 @@ describe("Alive Maps", () => {
     await open();
     expect(screen.getByRole("heading", { name: "Alive Maps" })).toBeTruthy();
     expect(screen.getByText("BETA")).toBeTruthy();
-    expect(mocks.props.block).toMatchObject({ apiKey: "um_test_alive", lang: "en", title: "Alive Maps", badge: "BETA" });
+    expect(mocks.props.block).toMatchObject({ apiKey: "um_test_alive", lang: "en", title: "Alive Maps", badge: "BETA", technical: false });
+    // Readers see the walk, not the API: no call count and no data-source footnote in the panel.
+    expect(screen.queryByText(/API calls/)).toBeNull();
     expect(mocks.props.block!.initial).toBeUndefined();
     const pictures = mocks.props.block!.pictures as Record<string, string[]>;
     expect(pictures.park!.length).toBeGreaterThan(0);
@@ -101,13 +112,26 @@ describe("Alive Maps", () => {
     expect(document.title).toBe("Alive Maps · Unmap app");
     // Nothing is fetched until "Get directions".
     expect(fetchSpy).not.toHaveBeenCalled();
+    expect(mocks.routed).toBe(0);
   });
 
   it("opens on the walk a shared link names", async () => {
     await open("?from=-114.087,51.0525&to=-114.0614,51.0478");
-    expect(mocks.props.block!.initial).toEqual({ from: [-114.087, 51.0525], to: [-114.0614, 51.0478] });
+    expect(mocks.props.block!.initial).toEqual({ from: [-114.087, 51.0525], to: [-114.0614, 51.0478], go: true });
+    expect(mocks.routed).toBeGreaterThan(0);
     // Those are the Kensington sample's ends, so the block shows that sample.
     expect(screen.getByTitle("Kensington to the Bow").getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("gets directions at once for a shared link, and shows the names it gives the ends", async () => {
+    await open("?from=-114.0649,51.0413&to=-114.0468,51.0476&fromName=Hotel+Arts&toName=East+Village");
+    expect(mocks.props.block!.initial).toEqual({ from: [-114.0649, 51.0413], to: [-114.0468, 51.0476], fromName: "Hotel Arts", toName: "East Village", go: true });
+    expect(screen.getByPlaceholderText("From Hotel Arts")).toBeTruthy();
+    expect(screen.getByPlaceholderText("To East Village")).toBeTruthy();
+    // The search started without a click: the reader sees the walks, not an empty map.
+    expect(mocks.routed).toBeGreaterThan(0);
+    // Opening writes nothing back: the link stays as it was shared.
+    expect(window.location.search).toBe("?from=-114.0649,51.0413&to=-114.0468,51.0476&fromName=Hotel+Arts&toName=East+Village");
   });
 
   it("keeps the link on the walk as the reader changes it, and leaves other keys alone", async () => {
@@ -116,6 +140,8 @@ describe("Alive Maps", () => {
     expect(window.location.search).toBe("?lang=fr");
     await act(async () => fireEvent.click(screen.getByTitle("Kensington à la rivière Bow")));
     const q = new URLSearchParams(window.location.search);
+    // A sample is known by its ends, so its names stay out of the link.
+    expect(q.has("fromName")).toBe(false);
     expect(q.get("from")).toBe("-114.087,51.0525");
     expect(q.get("to")).toBe("-114.0614,51.0478");
     expect(q.get("lang")).toBe("fr");
@@ -125,7 +151,32 @@ describe("Alive Maps", () => {
     const swapped = new URLSearchParams(window.location.search);
     expect(swapped.get("from")).toBe("-114.0614,51.0478");
     expect(swapped.get("to")).toBe("-114.087,51.0525");
+    // Swapped, the ends are no longer the sample, so the link names them.
+    expect(swapped.get("fromName")).toBeTruthy();
+    expect(swapped.get("toName")).toBeTruthy();
     expect(window.history.length).toBe(length);
+  });
+
+  it("opens a pinned walk with its stored route, and searches when the route file will not load", async () => {
+    const leg = { coords: [[-114.0649, 51.0413], [-114.0468, 51.0476]], durationS: 1380, distanceM: 1700 };
+    const file = { walk: leg, fastest: { ...leg, durationS: 1320 } };
+    fetchSpy.mockImplementationOnce((async (input: RequestInfo | URL) => {
+      expect(String(input)).toBe("/walks/hotel-arts/routes/arts.json");
+      return new Response(JSON.stringify(file));
+    }) as never);
+    await open("?from=-114.0649,51.0413&to=-114.0468,51.0476&fromName=Hotel+Arts&toName=East+Village&walk=/walks/hotel-arts/routes/arts.json&back=1");
+    await act(async () => {});
+    // The way back: the stored lines read from the other end.
+    expect((mocks.props.block!.initial as { pinned: typeof file }).pinned.walk.coords).toEqual([...leg.coords].reverse());
+    // A stored route is scored, not searched for: no route call.
+    expect(mocks.routed).toBe(0);
+    cleanup();
+
+    fetchSpy.mockImplementationOnce((async () => new Response("nope", { status: 404 })) as never);
+    await open("?from=-114.0649,51.0413&to=-114.0468,51.0476&walk=/walks/hotel-arts/routes/missing.json");
+    await act(async () => {});
+    expect((mocks.props.block!.initial as { pinned?: unknown }).pinned).toBeUndefined();
+    expect(mocks.routed).toBeGreaterThan(0);
   });
 
   it("ignores a link with only one valid end", async () => {

@@ -466,3 +466,111 @@ async function search(deps: WalkDeps, from: LngLat, to: LngLat, signal: AbortSig
     ...(graphSkipped ? { graphSkipped } : {}),
   };
 }
+
+// ---------------------------------------------------------------------------------------------
+// Pinned walks: a route fixed in advance, such as a hotel's walk from its door.
+
+/** One walk as a page stores it: the line, and the time and length the engine gave it. */
+export interface PinnedLeg {
+  coords: LngLat[];
+  durationS: number;
+  distanceM: number;
+}
+
+/**
+ * A walk fixed in advance and the fastest walk it was compared with, both as they were found, so a
+ * link opens that exact walk with that exact time instead of searching again. `sameAsFastest`
+ * says the walk is the fastest one: it is then shown alone.
+ */
+export interface PinnedWalk {
+  walk: PinnedLeg;
+  fastest: PinnedLeg;
+  sameAsFastest?: boolean;
+}
+
+/** Metres of basemap read around a pinned walk's lines, so a park beside the walk still counts. */
+const PIN_MARGIN_M = 150;
+
+/** The walk read backwards: the same lines and times, from the other end. */
+export function reversePinned(pinned: PinnedWalk): PinnedWalk {
+  const back = (leg: PinnedLeg): PinnedLeg => ({ ...leg, coords: [...leg.coords].reverse() });
+  return { ...pinned, walk: back(pinned.walk), fastest: back(pinned.fastest) };
+}
+
+/**
+ * Scores a pinned walk instead of searching for one: no route or match call, so the walk on screen
+ * and its time are the ones the link promised. It reads the basemap around both lines and the
+ * places along each, then scores them against the same data, as findWalks does. At most
+ * MAX_TILES + 4 calls. The walk is "pinned" (a detour, for the filters) unless it is the fastest.
+ */
+export async function scorePinned(deps: WalkDeps, pinned: PinnedWalk, signal: AbortSignal): Promise<WalkResult> {
+  const guard = (): void => {
+    if (signal.aborted) throw abortError();
+  };
+  const rethrowAbort = (e: unknown): void => {
+    if (signal.aborted) throw abortError();
+    if (isAbort(e)) throw e;
+  };
+  const lines = pinned.sameAsFastest ? [pinned.walk.coords] : [pinned.walk.coords, pinned.fastest.coords];
+  const all = lines.flat();
+  const from = all[0]!;
+  const P = projector(from);
+  const xy = all.map(P.to);
+  const [minX, maxX] = [Math.min(...xy.map((p) => p[0])) - PIN_MARGIN_M, Math.max(...xy.map((p) => p[0])) + PIN_MARGIN_M];
+  const [minY, maxY] = [Math.min(...xy.map((p) => p[1])) - PIN_MARGIN_M, Math.max(...xy.map((p) => p[1])) + PIN_MARGIN_M];
+  const [west, south] = P.from([minX, minY]);
+  const [east, north] = P.from([maxX, maxY]);
+  const bbox: [number, number, number, number] = [west, south, east, north];
+
+  guard();
+  let calls = 0;
+  const tilesP = settle(() => deps.tiles(bbox, signal));
+  const placeCalls = lines.flatMap((line) => [
+    settle(() => deps.placesAlong(line, LIFE_CATEGORIES, TOP_UP_M, signal)),
+    settle(() => deps.placesAlong(line, LANDMARK_CATEGORIES, TOP_UP_M, signal)),
+  ]);
+  calls += placeCalls.length;
+  const [tilesR, ...placesR] = await Promise.all([tilesP, ...placeCalls]);
+
+  let base: Omit<AliveData, "life" | "landmarks"> = { parks: [], water: [], roads: [] };
+  let graphSkipped: WalkResult["graphSkipped"];
+  if (tilesR.ok) {
+    calls += tilesR.value.requests;
+    base = dataFromTiles(tilesR.value.features);
+  } else {
+    rethrowAbort(tilesR.error);
+    if (tilesR.error instanceof RangeError) graphSkipped = "too-big";
+    else {
+      graphSkipped = "tiles-failed";
+      calls += requestsOf(tilesR.error) ?? tilesInBox(bbox);
+    }
+  }
+
+  let placesAvailable = true;
+  const life: Poi[] = [];
+  const landmarks: Poi[] = [];
+  for (const r of placesR) {
+    if (r.ok) continue;
+    rethrowAbort(r.error);
+    if (statusOf(r.error) !== 503) throw r.error;
+    placesAvailable = false;
+  }
+  if (placesAvailable) {
+    placesR.forEach((r, i) => {
+      if (r.ok) mergePois(i % 2 === 0 ? life : landmarks, r.value);
+    });
+  }
+  guard();
+
+  const p = prepare({ ...base, life, landmarks }, from);
+  const drafts: Draft[] = [{ id: "fastest", method: "fastest", ...pinned.fastest }];
+  if (!pinned.sameAsFastest) drafts.push({ id: "pinned", method: "detour", ...pinned.walk });
+  return {
+    candidates: drafts.map((c) => ({ ...c, scores: scoreRoute(p, c.coords) })),
+    calls,
+    placesAvailable,
+    basemapAvailable: !graphSkipped,
+    skipped: 0,
+    ...(graphSkipped ? { graphSkipped } : {}),
+  };
+}

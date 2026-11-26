@@ -5,9 +5,11 @@ export const TEXT = {
   en: {
     badge: "BETA",
     about: "About Alive Maps",
+    loadingWalk: "Loading the walk",
   },
   fr: {
     badge: "BÊTA",
     about: "À propos d'Alive Maps",
+    loadingWalk: "Chargement de la marche",
   },
 } satisfies Record<Lang, Record<string, string>>;

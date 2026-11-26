@@ -19,6 +19,10 @@ named. Each picture carries an "Illustration" tag and alt text saying it is AI-g
 The info button at the bottom right of the map holds the language switch, what is on screen and
 where it comes from, and **Built with Unmap**: the services and SDK calls behind the page.
 
+**Walks are in Canada.** The search follows the map, so over a US metro it finds US places, but
+Unmap's US routing is car only: a walk with an end in the US is `422 outside_coverage`, and the
+places along a walk are Canadian.
+
 ## The key it needs
 
 Any Unmap browser key. No add-on is needed.
@@ -51,8 +55,18 @@ domain) in the dashboard. Any static host works: `out/` is plain files.
 
 | Query | |
 | --- | --- |
-| `?from=-114.087,51.0525&to=-114.0614,51.0478` | opens on that walk, each end as `longitude,latitude`; both ends must be valid, or the app opens on the Bridgeland sample. The link follows the walk: picking a sample, searching an end or swapping them rewrites `from` and `to` in place, so the address bar is always a link to the walk on screen |
+| `?from=-114.087,51.0525&to=-114.0614,51.0478` | opens on that walk and gets directions at once, each end as `longitude,latitude`; both ends must be valid, or the app opens on the Bridgeland sample and waits for Get directions. The link follows the walk: picking a sample, searching an end or swapping them rewrites `from` and `to` in place, so the address bar is always a link to the walk on screen |
+| `&fromName=Hotel+Arts&toName=East+Village` | what the ends are called on the map and in the search boxes, instead of "Start" and "Destination"; one line, up to 80 characters. Searching an end writes its name here; a sample's ends leave these out |
+| `&walk=/walks/<page>/routes/<walk>.json` | pins the walk to a stored route on this site: the app opens exactly that walk and its stored time, scoring it rather than searching (no route or match call). `&back=1` reads it from the other end, for the way back. Only paths of that shape are read; a file that does not load or is malformed leaves the link searching as usual. Moving an end drops the pin from the link |
 | `?lang=fr` | French |
+
+Opening a link spends the same calls as pressing Get directions (see below), once per visit; a pinned walk spends only the basemap tiles and four places calls.
+
+The page is for walkers, so the block's technical details are off (`technical={false}`): no API
+call count, no "API detour" or "Walking graph" tags, no minimum-gain dial or method filter, no
+aliveness scores and no sources footnote under the button. The info popover still lists the data
+sources. Set `technical` back to `true` in `components/alive/alive-app.tsx` to see how a search was
+built while you work on it.
 
 ## What it costs
 

@@ -40,6 +40,8 @@ publish a database derived from it, it has to be under the ODbL too.
   because anyone measured the traffic.
 - **Coverage follows OpenStreetMap.** Where places are sparsely mapped, street life and landmarks
   score low.
+- **Canada only.** Walking routes, map matching and the places along a walk cover Canada; Unmap's
+  US routing is car only.
 
 Gaps are shown as gaps: when places are unavailable the panel says the ranking uses parks, water
 and streets away from traffic only; when the scoring tiles cannot be read it says parks, water and

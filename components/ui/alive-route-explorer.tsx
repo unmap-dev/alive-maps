@@ -10,12 +10,15 @@
  * up to three cards for what the pick passes, and a "Why this route" card with the five scores. A
  * full-bleed map with a floating panel, a bottom sheet on a phone.
  *
- * Props: `apiKey`, `lang` ("en" | "fr"), `className`, `initial` ({ from, to, label? }), `title`
- * (the panel heading, default "Find a livelier walk"), `badge` (a short tag beside it, such as
- * "BETA"), `pictures` (image URLs for the highlight cards, keyed by highlight kind or place
- * category id, each a list of variants; see `AlivePictures`), and `onEndsChange` (called with the
- * start and destination whenever the reader changes them, not at mount, so a page can keep them in
- * its URL). A card shows its places' most common category's picture, else its kind's, else the
+ * Props: `apiKey`, `lang` ("en" | "fr"), `className`, `initial` ({ from, to, label?, fromName?,
+ * toName?, go?, pinned? }: the opening walk, the names its ends show, whether to get directions at
+ * once, and a walk fixed in advance that is scored rather than searched for), `title` (the panel
+ * heading, default "Find a livelier walk"), `badge` (a short tag beside it, such as "BETA"), `pictures` (image URLs for the highlight cards, keyed by highlight kind or
+ * place category id, each a list of variants; see `AlivePictures`), and `onEndsChange` (called with
+ * the start, the destination and their names whenever the reader changes them, not at mount, so a
+ * page can keep them in its URL), and `technical` (default true: the API calls, how each walk was
+ * found, the minimum-gain dial, the aliveness scores and the sources note; false hides them for a
+ * page whose readers only want the walk). A card shows its places' most common category's picture, else its kind's, else the
  * drawn illustration; the variant is chosen from the place so a walk keeps its picture.
  *
  * Honest about its sources: the signals are parks, water and streets from the basemap tiles, and
@@ -72,7 +75,7 @@ import {
   type Method,
   type Search,
 } from "@/lib/alive-view";
-import { findWalks, type Candidate, type WalkResult } from "@/lib/alive-walks";
+import { findWalks, scorePinned, type Candidate, type PinnedWalk, type WalkResult } from "@/lib/alive-walks";
 
 // The block's words, samples and helpers live in alive-view.ts; re-exported here so the block is
 // one import.
@@ -100,8 +103,14 @@ export interface AliveRouteExplorerProps {
   apiKey: string;
   lang?: AliveLang;
   className?: string;
-  /** Where the walk starts and ends. Default: the Bridgeland sample. */
-  initial?: { from: LngLat; to: LngLat; label?: string };
+  /**
+   * Where the walk starts and ends. Default: the Bridgeland sample. `fromName` and `toName` are what
+   * the ends show until the reader moves them (default "Start" and "Destination"); `go` gets
+   * directions at mount, as if the reader had pressed the button, which spends the same calls.
+   * `pinned` fixes the walk: while the ends are the opening ones, Get directions scores that walk
+   * and the fastest one it stores instead of searching, and shows the pinned walk (see PinnedWalk).
+   */
+  initial?: { from: LngLat; to: LngLat; label?: string; fromName?: string; toName?: string; go?: boolean; pinned?: PinnedWalk };
   /** The panel's heading. Default: "Find a livelier walk" (fr "Trouver une marche plus vivante"). */
   title?: string;
   /** A short tag beside the heading, such as "BETA". None by default. */
@@ -113,10 +122,17 @@ export interface AliveRouteExplorerProps {
    */
   pictures?: AlivePictures;
   /**
-   * Called with the start and destination each time the reader changes them (a sample, a search,
-   * the swap), never at mount. A page can write them into its URL so a link opens the same walk.
+   * Called with the start, the destination and their names (null where an end has none of its
+   * own, such as a sample's) each time the reader changes them (a sample, a search, the swap),
+   * never at mount. A page can write them into its URL so a link opens the same walk.
    */
-  onEndsChange?: (ends: { from: LngLat; to: LngLat }) => void;
+  onEndsChange?: (ends: { from: LngLat; to: LngLat; fromName: string | null; toName: string | null }) => void;
+  /**
+   * Show how the block works: the API calls a search spent, how each walk was found, the
+   * minimum-gain dial and method filter, the aliveness scores and the sources note. Default true,
+   * for a developer trying the block; false for a page whose readers only want the walk.
+   */
+  technical?: boolean;
 }
 
 const same = (a: LngLat, b: LngLat) => a[0] === b[0] && a[1] === b[1];
@@ -124,10 +140,18 @@ const pairKey = (a: LngLat, b: LngLat) => `${a.join(",")}|${b.join(",")}`;
 
 function startingPoint(initial: AliveRouteExplorerProps["initial"]) {
   const sample = initial ? SAMPLE_COMMUTES.find((s) => same(s.from, initial.from) && same(s.to, initial.to)) : SAMPLE_COMMUTES[0]!;
-  return { sample: sample?.id ?? null, from: initial?.from ?? sample!.from, to: initial?.to ?? sample!.to, label: initial?.label ?? null };
+  return {
+    sample: sample?.id ?? null,
+    from: initial?.from ?? sample!.from,
+    to: initial?.to ?? sample!.to,
+    label: initial?.label ?? null,
+    names: [initial?.fromName?.trim() || null, initial?.toName?.trim() || null] as [string | null, string | null],
+    go: initial?.go === true,
+    pinned: initial?.pinned ?? null,
+  };
 }
 
-export function AliveRouteExplorer({ apiKey, lang = "en", className, initial, title, badge, pictures, onEndsChange }: AliveRouteExplorerProps) {
+export function AliveRouteExplorer({ apiKey, lang = "en", className, initial, title, badge, pictures, onEndsChange, technical = true }: AliveRouteExplorerProps) {
   const copy = ALIVE_COPY[lang];
   const hasKey = apiKey.trim() !== "";
   const [opening] = useState(() => startingPoint(initial));
@@ -136,7 +160,7 @@ export function AliveRouteExplorer({ apiKey, lang = "en", className, initial, ti
   const [ends, setEnds] = useState<{ from: LngLat; to: LngLat; names: [string | null, string | null] }>({
     from: opening.from,
     to: opening.to,
-    names: [null, null],
+    names: opening.names,
   });
   const [weights, setWeights] = useState<Weights>(DEFAULT_WEIGHTS);
   const [budget, setBudget] = useState(DEFAULT_BUDGET);
@@ -171,8 +195,8 @@ export function AliveRouteExplorer({ apiKey, lang = "en", className, initial, ti
     const key = pairKey(ends.from, ends.to);
     if (key === announced.current) return;
     announced.current = key;
-    onEnds.current?.({ from: ends.from, to: ends.to });
-  }, [ends.from, ends.to]);
+    onEnds.current?.({ from: ends.from, to: ends.to, fromName: ends.names[0], toName: ends.names[1] });
+  }, [ends]);
 
   const sample = SAMPLE_COMMUTES.find((s) => s.id === sampleId) ?? null;
   const from: Endpoint = { at: ends.from, name: ends.names[0] ?? sample?.ends[lang][0] ?? null };
@@ -189,7 +213,9 @@ export function AliveRouteExplorer({ apiKey, lang = "en", className, initial, ti
     return rank(visible, usableWeights(weights, result), budget, minGain / 100);
   }, [result, method, weights, budget, minGain]);
   const fastest = ranked?.rows.find((row) => row.method === "fastest") ?? null;
-  const pick = ranked?.rows.find((row) => row.id === ranked.pickId) ?? null;
+  // A pinned walk is the walk the link promised, whatever the dials would rank first.
+  const pickId = ranked?.rows.some((row) => row.id === "pinned") ? "pinned" : (ranked?.pickId ?? null);
+  const pick = ranked?.rows.find((row) => row.id === pickId) ?? null;
   const shown = ranked?.rows.find((row) => row.id === selectedId) ?? pick;
   // Once per walk: when a card cannot fit at the first framing, frame again with wider margins.
   const walkKey = shown ? `${pairKey(ends.from, ends.to)}:${shown.id}` : null;
@@ -230,7 +256,9 @@ export function AliveRouteExplorer({ apiKey, lang = "en", className, initial, ti
     flight.current = controller;
     setSearch({ state: "loading" });
     const key = pairKey(ends.from, ends.to);
-    findWalks(deps, ends.from, ends.to, controller.signal).then(
+    // The pinned walk holds only for the ends it was pinned between.
+    const pinned = opening.pinned && key === pairKey(opening.from, opening.to) ? opening.pinned : null;
+    (pinned ? scorePinned(deps, pinned, controller.signal) : findWalks(deps, ends.from, ends.to, controller.signal)).then(
       (found) => {
         if (controller.signal.aborted) return;
         // A result an outage degraded is not kept, so asking again tries the sources again.
@@ -243,6 +271,14 @@ export function AliveRouteExplorer({ apiKey, lang = "en", className, initial, ti
       },
     );
   }
+
+  // `initial.go`: get directions for the opening walk at mount. Through a ref, so the effect runs
+  // once per mount; in Strict Mode the unmount above aborts the first request and this asks again.
+  const runNow = useRef(run);
+  runNow.current = run;
+  useEffect(() => {
+    if (opening.go && deps) runNow.current();
+  }, [opening.go, deps]);
 
   if (!hasKey) {
     // Where the map would be: the block's gutter, the Alert at a readable width, the first action first.
@@ -280,12 +316,14 @@ export function AliveRouteExplorer({ apiKey, lang = "en", className, initial, ti
       placesUnavailable={placesUnavailable}
       basemapUnavailable={basemapUnavailable}
       defaultOpen={!narrow}
+      technical={technical}
     />
   ) : null;
   const controls = (
     <AliveControls
       lang={lang}
       inSheet={phone}
+      technical={technical}
       apiKey={apiKey}
       title={title}
       badge={badge}
@@ -323,11 +361,12 @@ export function AliveRouteExplorer({ apiKey, lang = "en", className, initial, ti
             onSelect={setSelectedId}
             onHover={setHoveredId}
             onRetry={run}
+            technical={technical}
           />
           {phone ? why : null}
         </>
       }
-      footer={<AliveGoButton lang={lang} busy={busy} calls={result?.calls ?? null} onGo={run} />}
+      footer={<AliveGoButton lang={lang} busy={busy} calls={result?.calls ?? null} onGo={run} technical={technical} />}
     />
   );
 

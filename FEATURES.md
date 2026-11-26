@@ -18,7 +18,9 @@ What Alive Maps does, which Unmap API does it, and what it deliberately does not
 | Scoring tiles unavailable | when the tiles are refused (a walk too long) or fail, parks, water and traffic leave the ranking the same way, and the walks are API detours only | Maps tiles |
 | Degraded answers are not kept | a search a source outage degraded is asked again next time; a full answer is kept per start and destination | none |
 | A phone layout | the panel becomes a bottom sheet; the summary card shows a failed search's reason and hints at partial results | none |
-| Shareable link | `?from=lng,lat&to=lng,lat` and `?lang=fr`; the link follows the walk on screen as you change its ends | none |
+| Shareable link | `?from=lng,lat&to=lng,lat` opens on that walk and gets directions at once; `fromName`/`toName` name its ends; `?lang=fr`; the link follows the walk on screen as you change its ends | Routing, Places, Maps tiles (the same calls as Get directions) |
+| Pinned walks | `walk=` opens a stored route (the hotel walks pages on apps.unmap.dev use it), so the walk and its time never drift; `back=1` for the way back | Places, Maps tiles (no routing) |
+| Reader-facing panel | no API call count, method tags, minimum-gain dial, aliveness scores or sources footnote; the info popover keeps the sources | none |
 | English and French | the switch in the info popover; map labels follow | Maps `lang` |
 | No-key state | explains how to get a key; never calls the API without one | none |
 | Built with Unmap | the services, calls, components and data sources behind the page, in the info popover | none |
